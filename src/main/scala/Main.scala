@@ -1,9 +1,24 @@
-import config.CliConfig
+import config.{CliConfig, FileConfig}
+import pureconfig.generic.auto._
 
 object Main extends App {
   parser.parse(args, CliConfig()) match {
-    case Some(config) => println(config)
-    case None         => // arguments are bad, error message will have been displayed
+    case Some(config) =>
+      val parsedFileConfig =
+        pureconfig.loadConfig[FileConfig] match {
+          case Right(fileConfig) => fileConfig
+          case Left(failures) =>
+            if (config.debug) {
+              // TODO: don't use println
+              println("failures: " + failures)
+            }
+            FileConfig()
+        }
+
+      println(config)
+      println(parsedFileConfig)
+
+    case None => // arguments are bad, error message will have been displayed
   }
 
   private def parser = new scopt.OptionParser[CliConfig]("bash_org_pl_fetch") {

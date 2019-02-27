@@ -1,7 +1,26 @@
+import cats.effect._
 import config.{CliConfig, FileConfig}
+import extract._
+import extract.DomainProfile._
+import extract.fetch.Http4sHttpFetcher
+import extract.parse._
+import extract.parse.jsoup.JSoupParser
 import pureconfig.generic.auto._
 
+// TODO: maybe read it from config?
+object BashOrgProfile
+    extends DomainProfile(
+      urlPattern = "http://bash.org.pl/latest/?page=%d",
+      mainCssSelector = ".post",
+      relativeDetailCssSelectors = Seq(
+        HtmlValueExtractor(None, Attribute("id")),
+        HtmlValueExtractor(Some(".points"), Text),
+        HtmlValueExtractor(Some(".post-content"), InnerHtml)
+      )
+    )
+
 object Main extends App {
+
   parser.parse(args, CliConfig()) match {
     case Some(config) =>
       val parsedFileConfig =
@@ -17,6 +36,14 @@ object Main extends App {
 
       println(config)
       println(parsedFileConfig)
+
+      val extractor =
+        new DomainProfileExtractor[IO]()
+          .extractData(numberOfPages = 3, BashOrgProfile, new Http4sHttpFetcher[IO](), new JSoupParser)
+
+      val results: Seq[Seq[String]] = extractor.unsafeRunSync()
+      println(results.mkString("\n=====\n"))
+      println("total: " + results.size)
 
     case None => // arguments are bad, error message will have been displayed
   }

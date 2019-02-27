@@ -2,7 +2,7 @@ import cats.effect._
 import config.{CliConfig, FileConfig}
 import extract._
 import extract.DomainProfile._
-import extract.fetch.Http4sHttpFetcher
+import extract.fetch.{Https4Client}
 import extract.parse._
 import extract.parse.jsoup.JSoupParser
 import pureconfig.generic.auto._
@@ -41,7 +41,7 @@ object Main extends App {
         new DomainProfileExtractor[IO]()
           .extractData(numberOfPages = Math.ceil(config.postCount / 20.0).toInt,
                        BashOrgProfile,
-                       new Http4sHttpFetcher[IO](),
+                       Https4Client.apply[IO](),
                        new JSoupParser)
 
       val results: Seq[Seq[String]] = extractor.unsafeRunSync()

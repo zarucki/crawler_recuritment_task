@@ -39,10 +39,13 @@ object Main extends App {
 
       val extractor =
         new DomainProfileExtractor[IO]()
-          .extractData(numberOfPages = 3, BashOrgProfile, new Http4sHttpFetcher[IO](), new JSoupParser)
+          .extractData(numberOfPages = Math.ceil(config.postCount / 20.0).toInt,
+                       BashOrgProfile,
+                       new Http4sHttpFetcher[IO](),
+                       new JSoupParser)
 
       val results: Seq[Seq[String]] = extractor.unsafeRunSync()
-      println(results.mkString("\n=====\n"))
+//      println(results.take(config.postCount).mkString("\n=====\n"))
       println("total: " + results.size)
 
     case None => // arguments are bad, error message will have been displayed

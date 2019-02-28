@@ -12,7 +12,7 @@ object BashOrgProfile
       entityDetailsExtractors = Seq( // TODO: what about errors here? Also maybe Lens library?
         (HtmlValueExtractor(None, Attribute("id")), (entity, value) => entity.copy(id = value.substring(1).toLong)),
         (HtmlValueExtractor(Some(".points"), Text), (entity, value) => entity.copy(points = value.toLong)),
-        (HtmlValueExtractor(Some(".post-content"), InnerHtml), (entity, value) => entity.copy(content = value)) // TODO: html entities need to be replaced
+        (HtmlValueExtractor(Some(".post-content"), InnerHtml), (entity, value) => entity.copy(content = value))
       )
     ) {
   override def emptyEntity: BashOrgContent = BashOrgContent()

@@ -10,7 +10,7 @@ class ExtractSpec extends UnitSpec {
 
   it should "properly visit paged results" in {
     val httpClient = mockHttpClient[IO]()
-    val parser = mockParser()
+    val parser = mockParser[IO]()
 
     val extractor =
       new DomainProfileExtractor[IO, BashOrgContent]()
@@ -34,7 +34,7 @@ class ExtractSpec extends UnitSpec {
 
   it should "should not visit any urls when IO not run" in {
     val httpClient = mockHttpClient[IO]()
-    val parser = mockParser()
+    val parser = mockParser[IO]()
 
     val extractor =
       new DomainProfileExtractor[IO, BashOrgContent]()
@@ -50,7 +50,7 @@ class ExtractSpec extends UnitSpec {
 
   it should "should return error when invalid number of pages" in {
     val httpClient = mockHttpClient[IO]()
-    val parser = mockParser()
+    val parser = mockParser[IO]()
 
     val extractor =
       new DomainProfileExtractor[IO, BashOrgContent]()

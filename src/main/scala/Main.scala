@@ -25,7 +25,7 @@ object Main extends App {
     val numberOfPagesToFetch = Math.ceil(config.postCount / BashOrgProfile.itemsPerPage.toDouble).toInt
     val extractor = new DomainProfileExtractor[IO, BashOrgContent]()
     val httpClient = Https4Client.apply[IO]()
-    val htmlParser = new JSoupParser
+    val htmlParser = new JSoupParser[IO]()
     val jsonSerializer = new CirceJsonSerializer[IO, BashOrgContent]()
     val fileWriter = new PrintWriterFileWriter[IO]()
 

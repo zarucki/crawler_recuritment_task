@@ -9,6 +9,6 @@ trait Extractor[F[_], TEntity] {
       numberOfPages: Int,
       domainProfile: DomainProfile[TEntity],
       httpFetcher: F[ReusableHttpClient[F]],
-      htmlParser: HtmlParser
+      htmlParser: HtmlParser[F]
   )(implicit F: Effect[F]): EitherT[F, Throwable, List[TEntity]]
 }

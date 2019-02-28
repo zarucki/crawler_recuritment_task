@@ -1,6 +1,7 @@
 import java.io.PrintWriter
 
 import cats.effect._
+import cats.implicits._
 import config.{CliOptionParser, Config}
 import extract._
 import extract.fetch.Https4Client
@@ -11,6 +12,7 @@ import org.apache.logging.log4j.{Level, LogManager}
 import org.apache.logging.log4j.core.config.Configurator
 import pureconfig.generic.auto._
 import transform.CirceJsonSerializer
+import fs2.{Stream => FStream}
 
 object Main extends App {
   private val logger = LogManager.getLogger
@@ -58,12 +60,16 @@ object Main extends App {
     }
   }
 
-  private def writeToFile(fileName: String, contentToWrite: String) = {
-    // TODO: `handleErrors
-    // TODO: write more stream like?
-    fs2.Stream.bracket(IO(new PrintWriter(fileName)))(
-      use = pw => fs2.Stream.eval(IO(pw.println(contentToWrite))),
-      release = pw => IO(pw.close())
-    )
+  private def writeToFile(fileName: String, contentToWrite: String): FStream[IO, Unit] = {
+    val acquirePrinter = IO(Either.catchNonFatal(new PrintWriter(fileName)))
+
+    def writeAction(pw: Either[Throwable, PrintWriter]): FStream[IO, Unit] = {
+      FStream.eval(IO[Unit](pw.map(_.println(contentToWrite))))
+    }
+    def releaseAction(pw: Either[Throwable, PrintWriter]): IO[Unit] = {
+      IO[Unit](pw.map(_.close()))
+    }
+
+    fs2.Stream.bracket(acquirePrinter)(use = writeAction, release = releaseAction)
   }
 }

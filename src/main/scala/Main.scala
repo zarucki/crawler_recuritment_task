@@ -35,10 +35,12 @@ object Main extends App {
 
       val extractedData =
         new DomainProfileExtractor[IO, BashOrgContent]()
-          .fetchAndExtractData(numberOfPages = Math.ceil(config.postCount / BashOrgProfile.itemsPerPage.toDouble).toInt,
-                               BashOrgProfile,
-                               Https4Client.apply[IO](),
-                               new JSoupParser)
+          .fetchAndExtractData(
+            numberOfPages = Math.ceil(config.postCount / BashOrgProfile.itemsPerPage.toDouble).toInt,
+            BashOrgProfile,
+            Https4Client.apply[IO](),
+            new JSoupParser
+          )
 
       val dataAsJson = extractedData.map(_.take(config.postCount).asJson.toString())
 
@@ -55,8 +57,10 @@ object Main extends App {
   private def writeToFile(fileName: String, contentToWrite: String) = {
     // TODO: `handleErrors
     // TODO: write more stream like?
-    fs2.Stream.bracket(IO(new PrintWriter(fileName)))(use = pw => fs2.Stream.eval(IO(pw.println(contentToWrite))),
-                                                      release = pw => IO(pw.close()))
+    fs2.Stream.bracket(IO(new PrintWriter(fileName)))(
+      use = pw => fs2.Stream.eval(IO(pw.println(contentToWrite))),
+      release = pw => IO(pw.close())
+    )
   }
 
   private def parser = new scopt.OptionParser[CliConfig]("run") {

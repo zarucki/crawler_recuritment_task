@@ -7,10 +7,12 @@ import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import fs2.{Stream => FStream}
 
 class DomainProfileExtractor[F[_], TEntity] extends Extractor[F, TEntity] {
-  def fetchAndExtractData(numberOfPages: Int,
-                          domainProfile: DomainProfile[TEntity],
-                          httpFetcher: F[ReusableHttpClient[F]],
-                          htmlParser: HtmlParser)(implicit F: Effect[F]): F[List[TEntity]] = {
+  def fetchAndExtractData(
+      numberOfPages: Int,
+      domainProfile: DomainProfile[TEntity],
+      httpFetcher: F[ReusableHttpClient[F]],
+      htmlParser: HtmlParser
+  )(implicit F: Effect[F]): F[List[TEntity]] = {
     if (numberOfPages < 1) {
       F.raiseError(new IllegalArgumentException("numberOfPages can't be less than 1."))
     } else {

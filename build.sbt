@@ -5,9 +5,8 @@ version := "0.1"
 scalaVersion := "2.12.8"
 
 val log4jVersion = "2.11.2"
-
-// Old because of conflicts in dependencies
-val log4CatVersion = "0.1.1"
+val log4CatVersion = "0.1.1" // Old because of conflicts in dependencies
+val scalaTestVersion = "3.0.5"
 
 libraryDependencies ++= Seq(
 	"org.typelevel" %% "cats-core" % "1.4.0" withSources() withJavadoc(),
@@ -21,8 +20,9 @@ libraryDependencies ++= Seq(
 	"org.apache.logging.log4j" % "log4j-core" % log4jVersion,
 	"io.chrisdavenport" %% "log4cats-core"    % log4CatVersion,
 	"io.chrisdavenport" %% "log4cats-slf4j"   % log4CatVersion,
-	"io.chrisdavenport" %% "log4cats-log4s"   % log4CatVersion
-
+	"io.chrisdavenport" %% "log4cats-log4s"   % log4CatVersion, 
+	"org.scalactic" %% "scalactic" % scalaTestVersion,
+	"org.scalatest" %% "scalatest" % scalaTestVersion % "test"
 )
 
 scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint", "-opt:l:inline", "-opt-inline-from:**", "-Ypartial-unification", "-language:higherKinds")

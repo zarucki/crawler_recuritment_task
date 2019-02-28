@@ -11,6 +11,7 @@ import io.circe.syntax._
 import org.apache.logging.log4j.{Level, LogManager}
 import org.apache.logging.log4j.core.config.Configurator
 import pureconfig.generic.auto._
+import transform.CirceJsonSerializer
 
 object Main extends App {
   private val logger = LogManager.getLogger
@@ -28,11 +29,12 @@ object Main extends App {
     val extractor = new DomainProfileExtractor[IO, BashOrgContent]()
     val httpClient = Https4Client.apply[IO]()
     val htmlParser = new JSoupParser
+    val jsonSerializer = new CirceJsonSerializer[BashOrgContent]()
 
     extractor
       .fetchAndExtractData(numberOfPagesToFetch, BashOrgProfile, httpClient, htmlParser)
       .map(_.take(config.postCount))
-      .map(_.asJson.toString())
+      .map(jsonSerializer.arrayAsJson(_).toString())
       .flatMap(contentToWrite => writeToFile(config.outputPath, contentToWrite).compile.drain)
       .attempt
       .unsafeRunSync()

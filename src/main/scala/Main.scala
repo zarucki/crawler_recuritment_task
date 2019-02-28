@@ -1,11 +1,10 @@
 import cats.effect._
 import config.{CliConfig, FileConfig}
 import extract._
-import extract.DomainProfile._
 import extract.fetch.Https4Client
-import extract.parse._
 import extract.parse.jsoup.JSoupParser
 import extract.profiles.{BashOrgContent, BashOrgProfile}
+import io.circe.generic.auto._, io.circe.syntax._
 import pureconfig.generic.auto._
 
 object Main extends App {
@@ -33,8 +32,10 @@ object Main extends App {
                                Https4Client.apply[IO](),
                                new JSoupParser)
 
-      val results: List[BashOrgContent] = extractedData.unsafeRunSync()
-//      println(results.take(config.postCount).mkString("\n=====\n"))
+      val dataAsJson = extractedData.map(_.map(_.asJson))
+
+      val results = dataAsJson.unsafeRunSync()
+      println(results.take(config.postCount).mkString("\n=====\n"))
       println("total: " + results.size)
 
     case None => // arguments are bad, error message will have been displayed

@@ -20,12 +20,16 @@ class ExtractSpec extends UnitSpec {
           httpFetcher = IO(httpClient),
           htmlParser = parser
         )
+        .value
         .unsafeRunSync()
 
     assert(
-      httpClient.visitedUrlHistory == Queue("http://bash.org.pl/latest/?page=1",
-                                            "http://bash.org.pl/latest/?page=2",
-                                            "http://bash.org.pl/latest/?page=3"))
+      httpClient.visitedUrlHistory == Queue(
+        "http://bash.org.pl/latest/?page=1",
+        "http://bash.org.pl/latest/?page=2",
+        "http://bash.org.pl/latest/?page=3"
+      )
+    )
   }
 
   it should "should not visit any urls when IO not run" in {

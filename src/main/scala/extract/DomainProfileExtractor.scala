@@ -1,4 +1,5 @@
 package extract
+import cats.data.EitherT
 import cats.effect._
 import cats.implicits._
 import extract.fetch.ReusableHttpClient
@@ -12,9 +13,9 @@ class DomainProfileExtractor[F[_], TEntity] extends Extractor[F, TEntity] {
       domainProfile: DomainProfile[TEntity],
       httpFetcher: F[ReusableHttpClient[F]],
       htmlParser: HtmlParser
-  )(implicit F: Effect[F]): F[List[TEntity]] = {
+  )(implicit F: Effect[F]): EitherT[F, Throwable, List[TEntity]] = {
     if (numberOfPages < 1) {
-      F.raiseError(new IllegalArgumentException("numberOfPages can't be less than 1."))
+      EitherT.leftT(new IllegalArgumentException("numberOfPages can't be less than 1."))
     } else {
 
       def useHttpClient(httpClient: ReusableHttpClient[F]) = {
@@ -50,7 +51,7 @@ class DomainProfileExtractor[F[_], TEntity] extends Extractor[F, TEntity] {
         FStream.eval(result)
       }
 
-      FStream.bracket(httpFetcher)(useHttpClient, release = _.shutDown).compile.foldMonoid
+      EitherT.right(FStream.bracket(httpFetcher)(useHttpClient, release = _.shutDown).compile.foldMonoid)
     }
   }
 }

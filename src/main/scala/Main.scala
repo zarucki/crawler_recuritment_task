@@ -1,5 +1,6 @@
 import java.io.PrintWriter
 
+import cats.data.EitherT
 import cats.effect._
 import cats.implicits._
 import config.{CliOptionParser, Config}
@@ -36,19 +37,15 @@ object Main extends App {
       bashContentItems <- extractor
         .fetchAndExtractData(numberOfPagesToFetch, BashOrgProfile, httpClient, htmlParser)
       jsonToWrite <- jsonSerializer.arrayAsJson(bashContentItems.take(config.postCount))
-      afterWrite <- writeToFile(config.outputPath, jsonToWrite.toString()).compile.drain
-    } yield afterWrite
+      result <- EitherT(writeToFile(config.outputPath, jsonToWrite.toString()).compile.foldMonoid)
+    } yield result
 
-    try {
-      pipeline.attempt
-        .flatMap {
-          case Left(throwable) => IO(logger.error("Crashed with error.", throwable))
-          case _               => IO(logger.info("Seems like everything worked. Shutting down"))
-        }
-        .unsafeRunSync()
-    } catch {
-      case ex: Exception => logger.fatal("This should not happen, errors should propagate other way.", ex)
-    }
+    pipeline.value
+      .flatMap {
+        case Left(throwable) => IO(logger.error("Crashed with error.", throwable))
+        case _               => IO(logger.info("Seems like everything worked. Shutting down"))
+      }
+      .unsafeRunSync()
   }
 
   private def readFileConfig(): Option[Config] = {
@@ -60,16 +57,16 @@ object Main extends App {
     }
   }
 
-  private def writeToFile(fileName: String, contentToWrite: String): FStream[IO, Unit] = {
+  private def writeToFile(fileName: String, contentToWrite: String): FStream[IO, Either[Throwable, Unit]] = {
     val acquirePrinter = IO(Either.catchNonFatal(new PrintWriter(fileName)))
 
-    def writeAction(pw: Either[Throwable, PrintWriter]): FStream[IO, Unit] = {
-      FStream.eval(IO[Unit](pw.map(_.println(contentToWrite))))
+    def writeAction(pw: Either[Throwable, PrintWriter]): FStream[IO, Either[Throwable, Unit]] = {
+      FStream.eval(IO(pw.map(_.println(contentToWrite))))
     }
     def releaseAction(pw: Either[Throwable, PrintWriter]): IO[Unit] = {
       IO[Unit](pw.map(_.close()))
     }
 
-    fs2.Stream.bracket(acquirePrinter)(use = writeAction, release = releaseAction)
+    FStream.bracket(acquirePrinter)(use = writeAction, release = releaseAction)
   }
 }

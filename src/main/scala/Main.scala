@@ -2,22 +2,11 @@ import cats.effect._
 import config.{CliConfig, FileConfig}
 import extract._
 import extract.DomainProfile._
-import extract.fetch.{Https4Client}
+import extract.fetch.Https4Client
 import extract.parse._
 import extract.parse.jsoup.JSoupParser
+import extract.profiles.{BashOrgContent, BashOrgProfile}
 import pureconfig.generic.auto._
-
-// TODO: maybe read it from config?
-object BashOrgProfile
-    extends DomainProfile(
-      urlPattern = "http://bash.org.pl/latest/?page=%d",
-      mainCssSelector = ".post",
-      relativeDetailCssSelectors = Seq(
-        HtmlValueExtractor(None, Attribute("id")),
-        HtmlValueExtractor(Some(".points"), Text),
-        HtmlValueExtractor(Some(".post-content"), InnerHtml)
-      )
-    )
 
 object Main extends App {
 
@@ -37,14 +26,14 @@ object Main extends App {
       println(config)
       println(parsedFileConfig)
 
-      val extractor =
-        new DomainProfileExtractor[IO]()
+      val extractedData =
+        new DomainProfileExtractor[IO, BashOrgContent]()
           .fetchAndExtractData(numberOfPages = Math.ceil(config.postCount / 20.0).toInt,
                                BashOrgProfile,
                                Https4Client.apply[IO](),
                                new JSoupParser)
 
-      val results: Seq[Seq[String]] = extractor.unsafeRunSync()
+      val results: List[BashOrgContent] = extractedData.unsafeRunSync()
 //      println(results.take(config.postCount).mkString("\n=====\n"))
       println("total: " + results.size)
 

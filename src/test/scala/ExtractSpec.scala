@@ -1,5 +1,6 @@
 import cats.effect.IO
 import extract.DomainProfileExtractor
+import extract.profiles.{BashOrgContent, BashOrgProfile}
 
 import scala.collection.immutable.Queue
 
@@ -12,7 +13,7 @@ class ExtractSpec extends UnitSpec {
     val parser = mockParser()
 
     val extractor =
-      new DomainProfileExtractor[IO]()
+      new DomainProfileExtractor[IO, BashOrgContent]()
         .fetchAndExtractData(
           numberOfPages = 3,
           domainProfile = BashOrgProfile,
@@ -32,7 +33,7 @@ class ExtractSpec extends UnitSpec {
     val parser = mockParser()
 
     val extractor =
-      new DomainProfileExtractor[IO]()
+      new DomainProfileExtractor[IO, BashOrgContent]()
         .fetchAndExtractData(
           numberOfPages = 3,
           domainProfile = BashOrgProfile,
@@ -48,7 +49,7 @@ class ExtractSpec extends UnitSpec {
     val parser = mockParser()
 
     val extractor =
-      new DomainProfileExtractor[IO]()
+      new DomainProfileExtractor[IO, BashOrgContent]()
         .fetchAndExtractData(
           numberOfPages = 0,
           domainProfile = BashOrgProfile,

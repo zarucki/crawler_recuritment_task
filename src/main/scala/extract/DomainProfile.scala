@@ -3,11 +3,13 @@ package extract
 import extract.DomainProfile.{CssSelector, HtmlValueExtractor}
 import extract.parse.HtmlValue
 
-// TODO: more complex paging schemes?
-case class DomainProfile(urlPattern: String,
-                         mainCssSelector: CssSelector,
-                         relativeDetailCssSelectors: Seq[HtmlValueExtractor],
-                         firstIndex: Int = 1)
+abstract class DomainProfile[TEntity](
+    val urlPattern: String, // TODO: more complex paging schemes?
+    val mainCssSelector: CssSelector,
+    val entityDetailsExtractors: Seq[(HtmlValueExtractor, (TEntity, String) => TEntity)],
+    val firstIndex: Int = 1) {
+  def emptyEntity: TEntity
+}
 
 object DomainProfile {
   type CssSelector = String

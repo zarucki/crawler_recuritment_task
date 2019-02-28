@@ -6,11 +6,11 @@ import extract.parse._
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import fs2.{Stream => FStream}
 
-class DomainProfileExtractor[F[_]] extends Extractor[F] {
+class DomainProfileExtractor[F[_], TEntity] extends Extractor[F, TEntity] {
   def fetchAndExtractData(numberOfPages: Int,
-                          domainProfile: DomainProfile,
+                          domainProfile: DomainProfile[TEntity],
                           httpFetcher: F[ReusableHttpClient[F]],
-                          htmlParser: HtmlParser)(implicit F: Effect[F]): F[List[Seq[String]]] = {
+                          htmlParser: HtmlParser)(implicit F: Effect[F]): F[List[TEntity]] = {
     assert(numberOfPages > 0, "number of pages needs to be greater than 0")
 
     def useHttpClient(httpClient: ReusableHttpClient[F]) = {
@@ -31,8 +31,9 @@ class DomainProfileExtractor[F[_]] extends Extractor[F] {
                 .map(htmlParser.parse)
                 .map { parsedHtml =>
                   parsedHtml.getMatchingElements(domainProfile.mainCssSelector).map { matchingRootElement =>
-                    domainProfile.relativeDetailCssSelectors.map { htmlValueExtractor =>
-                      matchingRootElement.getString(htmlValueExtractor)
+                    domainProfile.entityDetailsExtractors.foldLeft(domainProfile.emptyEntity) {
+                      case (entity, (extractor, modifier)) =>
+                        modifier(entity, matchingRootElement.getString(extractor))
                     }
                   }
                 }

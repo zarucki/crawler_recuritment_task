@@ -4,10 +4,13 @@ import extract._
 import extract.fetch.Https4Client
 import extract.parse.jsoup.JSoupParser
 import extract.profiles.{BashOrgContent, BashOrgProfile}
-import io.circe.generic.auto._, io.circe.syntax._
+import io.circe.generic.auto._
+import io.circe.syntax._
+import org.apache.logging.log4j.LogManager
 import pureconfig.generic.auto._
 
 object Main extends App {
+  val logger = LogManager.getLogger
 
   parser.parse(args, CliConfig()) match {
     case Some(config) =>
@@ -34,9 +37,12 @@ object Main extends App {
 
       val dataAsJson = extractedData.map(_.map(_.asJson))
 
-      val results = dataAsJson.unsafeRunSync()
-      println(results.take(config.postCount).mkString("\n=====\n"))
-      println("total: " + results.size)
+      dataAsJson.attempt.unsafeRunSync() match {
+        case Right(listOfJsons) =>
+          println(listOfJsons.take(config.postCount).mkString("\n=====\n"))
+          println("total: " + listOfJsons.size)
+        case Left(throwable) => logger.fatal("Crashed.", throwable)
+      }
 
     case None => // arguments are bad, error message will have been displayed
   }

@@ -11,41 +11,44 @@ class DomainProfileExtractor[F[_], TEntity] extends Extractor[F, TEntity] {
                           domainProfile: DomainProfile[TEntity],
                           httpFetcher: F[ReusableHttpClient[F]],
                           htmlParser: HtmlParser)(implicit F: Effect[F]): F[List[TEntity]] = {
-    assert(numberOfPages > 0, "number of pages needs to be greater than 0")
+    if (numberOfPages < 1) {
+      F.raiseError(new IllegalArgumentException("numberOfPages can't be less than 1."))
+    } else {
 
-    def useHttpClient(httpClient: ReusableHttpClient[F]) = {
-      val pagesToFetch = (domainProfile.firstIndex until (domainProfile.firstIndex + numberOfPages)).toList
+      def useHttpClient(httpClient: ReusableHttpClient[F]) = {
+        val pagesToFetch = (domainProfile.firstIndex until (domainProfile.firstIndex + numberOfPages)).toList
 
-      val result = Slf4jLogger.create[F].flatMap { logger =>
-        F.pure(pagesToFetch).flatMap { pages =>
-          pages
-            .map { pageIndex =>
-              domainProfile.urlPattern.format(pageIndex)
-            }
-            .map { urlToFetch =>
-              httpClient
-                .fetchHtmlFromUrl(urlToFetch)
-                .flatMap { htmlString =>
-                  logger.info(s"Fetched html from $urlToFetch").map { case _ => htmlString }
-                }
-                .map(htmlParser.parse)
-                .map { parsedHtml =>
-                  parsedHtml.getMatchingElements(domainProfile.mainCssSelector).map { matchingRootElement =>
-                    domainProfile.entityDetailsExtractors.foldLeft(domainProfile.emptyEntity) {
-                      case (entity, (extractor, modifier)) =>
-                        modifier(entity, matchingRootElement.getString(extractor))
+        val result = Slf4jLogger.create[F].flatMap { logger =>
+          F.pure(pagesToFetch).flatMap { pages =>
+            pages
+              .map { pageIndex =>
+                domainProfile.urlPattern.format(pageIndex)
+              }
+              .map { urlToFetch =>
+                httpClient
+                  .fetchHtmlFromUrl(urlToFetch)
+                  .flatMap { htmlString =>
+                    logger.info(s"Fetched html from $urlToFetch").map { case _ => htmlString }
+                  }
+                  .map(htmlParser.parse)
+                  .map { parsedHtml =>
+                    parsedHtml.getMatchingElements(domainProfile.mainCssSelector).map { matchingRootElement =>
+                      domainProfile.entityDetailsExtractors.foldLeft(domainProfile.emptyEntity) {
+                        case (entity, (extractor, modifier)) =>
+                          modifier(entity, matchingRootElement.getString(extractor))
+                      }
                     }
                   }
-                }
-            }
-            .sequence
-            .map(_.flatten)
+              }
+              .sequence
+              .map(_.flatten)
+          }
         }
+
+        FStream.eval(result)
       }
 
-      FStream.eval(result)
+      FStream.bracket(httpFetcher)(useHttpClient, release = _.shutDown).compile.foldMonoid
     }
-
-    FStream.bracket(httpFetcher)(useHttpClient, release = _.shutDown).compile.foldMonoid
   }
 }

@@ -7,10 +7,10 @@ import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import fs2.{Stream => FStream}
 
 class DomainProfileExtractor[F[_]] extends Extractor[F] {
-  def extractData(numberOfPages: Int,
-                  domainProfile: DomainProfile,
-                  httpFetcher: F[ReusableHttpClient[F]],
-                  htmlParser: HtmlParser)(implicit F: Effect[F]): F[List[Seq[String]]] = {
+  def fetchAndExtractData(numberOfPages: Int,
+                          domainProfile: DomainProfile,
+                          httpFetcher: F[ReusableHttpClient[F]],
+                          htmlParser: HtmlParser)(implicit F: Effect[F]): F[List[Seq[String]]] = {
     assert(numberOfPages > 0, "number of pages needs to be greater than 0")
 
     def useHttpClient(httpClient: ReusableHttpClient[F]) = {

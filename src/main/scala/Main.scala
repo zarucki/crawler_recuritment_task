@@ -39,10 +39,10 @@ object Main extends App {
 
       val extractor =
         new DomainProfileExtractor[IO]()
-          .extractData(numberOfPages = Math.ceil(config.postCount / 20.0).toInt,
-                       BashOrgProfile,
-                       Https4Client.apply[IO](),
-                       new JSoupParser)
+          .fetchAndExtractData(numberOfPages = Math.ceil(config.postCount / 20.0).toInt,
+                               BashOrgProfile,
+                               Https4Client.apply[IO](),
+                               new JSoupParser)
 
       val results: Seq[Seq[String]] = extractor.unsafeRunSync()
 //      println(results.take(config.postCount).mkString("\n=====\n"))

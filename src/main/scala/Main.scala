@@ -1,8 +1,4 @@
-import java.io.PrintWriter
-
-import cats.data.EitherT
 import cats.effect._
-import cats.implicits._
 import config.{CliOptionParser, Config}
 import extract._
 import extract.fetch.Https4Client
@@ -12,8 +8,7 @@ import io.circe.generic.auto._
 import org.apache.logging.log4j.{Level, LogManager}
 import org.apache.logging.log4j.core.config.Configurator
 import pureconfig.generic.auto._
-import transform.CirceJsonSerializer
-import fs2.{Stream => FStream}
+import transform.{CirceJsonSerializer, PrintWriterFileWriter}
 
 object Main extends App {
   private val logger = LogManager.getLogger
@@ -32,12 +27,13 @@ object Main extends App {
     val httpClient = Https4Client.apply[IO]()
     val htmlParser = new JSoupParser
     val jsonSerializer = new CirceJsonSerializer[IO, BashOrgContent]()
+    val fileWriter = new PrintWriterFileWriter[IO]()
 
     val pipeline = for {
       bashContentItems <- extractor
         .fetchAndExtractData(numberOfPagesToFetch, BashOrgProfile, httpClient, htmlParser)
       jsonToWrite <- jsonSerializer.arrayAsJson(bashContentItems.take(config.postCount))
-      result <- EitherT(writeToFile(config.outputPath, jsonToWrite.toString()).compile.foldMonoid)
+      result <- fileWriter.writeToFile(config.outputPath, jsonToWrite.toString())
     } yield result
 
     pipeline.value
@@ -55,18 +51,5 @@ object Main extends App {
         logger.error("Failure when reading file config: " + failures)
         None
     }
-  }
-
-  private def writeToFile(fileName: String, contentToWrite: String): FStream[IO, Either[Throwable, Unit]] = {
-    val acquirePrinter = IO(Either.catchNonFatal(new PrintWriter(fileName)))
-
-    def writeAction(pw: Either[Throwable, PrintWriter]): FStream[IO, Either[Throwable, Unit]] = {
-      FStream.eval(IO(pw.map(_.println(contentToWrite))))
-    }
-    def releaseAction(pw: Either[Throwable, PrintWriter]): IO[Unit] = {
-      IO[Unit](pw.map(_.close()))
-    }
-
-    FStream.bracket(acquirePrinter)(use = writeAction, release = releaseAction)
   }
 }

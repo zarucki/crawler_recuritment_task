@@ -17,7 +17,6 @@ class DomainProfileExtractor[F[_], TEntity] extends Extractor[F, TEntity] {
     if (numberOfPages < 1) {
       EitherT.leftT(new IllegalArgumentException("numberOfPages can't be less than 1."))
     } else {
-
       def useHttpClient(httpClient: ReusableHttpClient[F]) = {
         val pagesToFetch = (domainProfile.firstIndex until (domainProfile.firstIndex + numberOfPages)).toList
 

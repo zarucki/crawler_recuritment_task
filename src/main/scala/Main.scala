@@ -6,7 +6,8 @@ import extract.parse.jsoup.JSoupParser
 import extract.profiles.{BashOrgContent, BashOrgProfile}
 import io.circe.generic.auto._
 import io.circe.syntax._
-import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.{Level, LogManager}
+import org.apache.logging.log4j.core.config.Configurator
 import pureconfig.generic.auto._
 
 object Main extends App {
@@ -25,6 +26,10 @@ object Main extends App {
             FileConfig()
         }
 
+      if (config.debug) {
+        Configurator.setRootLevel(Level.DEBUG)
+      }
+
       println(config)
       println(parsedFileConfig)
 
@@ -39,7 +44,7 @@ object Main extends App {
 
       dataAsJson.attempt.unsafeRunSync() match {
         case Right(listOfJsons) =>
-          println(listOfJsons.take(config.postCount).mkString("\n=====\n"))
+//          println(listOfJsons.take(config.postCount).mkString("\n=====\n"))
           println("total: " + listOfJsons.size)
         case Left(throwable) => logger.fatal("Crashed.", throwable)
       }
@@ -54,14 +59,9 @@ object Main extends App {
       .action((x, c) => c.copy(postCount = x))
       .text("count of bash.org.pl posts to fetch.")
 
-    opt[Unit]("verbose")
-      .action((_, c) => c.copy(verbose = true))
-      .text("verbose is a flag")
-
     opt[Unit]("debug")
-      .hidden()
       .action((_, c) => c.copy(debug = true))
-      .text("this option is hidden in the usage text")
+      .text("for showing debug messages")
 
     help("help").text("prints this usage text")
 

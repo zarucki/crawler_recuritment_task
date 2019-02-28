@@ -1,6 +1,7 @@
 package transform
+import cats.effect.Sync
 
-trait JsonSerializer[TInput, TOutput] {
-  def asJson(input: TInput): TOutput
-  def arrayAsJson(input: List[TInput]): TOutput
+trait JsonSerializer[F[_], TInput, TOutput] {
+  def asJson(input: TInput)(implicit F: Sync[F]): F[TOutput]
+  def arrayAsJson(input: List[TInput])(implicit F: Sync[F]): F[TOutput]
 }

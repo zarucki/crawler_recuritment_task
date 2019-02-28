@@ -7,7 +7,6 @@ import extract.fetch.Https4Client
 import extract.parse.jsoup.JSoupParser
 import extract.profiles.{BashOrgContent, BashOrgProfile}
 import io.circe.generic.auto._
-import io.circe.syntax._
 import org.apache.logging.log4j.{Level, LogManager}
 import org.apache.logging.log4j.core.config.Configurator
 import pureconfig.generic.auto._
@@ -29,19 +28,25 @@ object Main extends App {
     val extractor = new DomainProfileExtractor[IO, BashOrgContent]()
     val httpClient = Https4Client.apply[IO]()
     val htmlParser = new JSoupParser
-    val jsonSerializer = new CirceJsonSerializer[BashOrgContent]()
+    val jsonSerializer = new CirceJsonSerializer[IO, BashOrgContent]()
 
-    extractor
-      .fetchAndExtractData(numberOfPagesToFetch, BashOrgProfile, httpClient, htmlParser)
-      .map(_.take(config.postCount))
-      .map(jsonSerializer.arrayAsJson(_).toString())
-      .flatMap(contentToWrite => writeToFile(config.outputPath, contentToWrite).compile.drain)
-      .attempt
-      .unsafeRunSync()
-      .left
-      .foreach { throwable =>
-        logger.fatal("Crashed with error.", throwable)
-      }
+    val pipeline = for {
+      bashContentItems <- extractor
+        .fetchAndExtractData(numberOfPagesToFetch, BashOrgProfile, httpClient, htmlParser)
+      jsonToWrite <- jsonSerializer.arrayAsJson(bashContentItems.take(config.postCount))
+      afterWrite <- writeToFile(config.outputPath, jsonToWrite.toString()).compile.drain
+    } yield afterWrite
+
+    try {
+      pipeline.attempt
+        .flatMap {
+          case Left(throwable) => IO(logger.error("Crashed with error.", throwable))
+          case _               => IO(logger.info("Seems like everything worked. Shutting down"))
+        }
+        .unsafeRunSync()
+    } catch {
+      case ex: Exception => logger.fatal("This should not happen, errors should propagate other way.", ex)
+    }
   }
 
   private def readFileConfig(): Option[Config] = {

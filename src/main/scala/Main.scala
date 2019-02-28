@@ -1,7 +1,7 @@
 import java.io.PrintWriter
 
 import cats.effect._
-import config.{CliConfig, CliOptionParser, FileConfig}
+import config.{CliOptionParser, Config}
 import extract._
 import extract.fetch.Https4Client
 import extract.parse.jsoup.JSoupParser
@@ -13,45 +13,42 @@ import org.apache.logging.log4j.core.config.Configurator
 import pureconfig.generic.auto._
 
 object Main extends App {
-  val logger = LogManager.getLogger
+  private val logger = LogManager.getLogger
 
-  CliOptionParser.parser().parse(args, CliConfig()) match {
-    case Some(config) =>
-      val parsedFileConfig =
-        pureconfig.loadConfig[FileConfig] match {
-          case Right(fileConfig) => fileConfig
-          case Left(failures) =>
-            logger.error("Failure when reading file config: " + failures)
-            FileConfig()
-        }
+  val fileBasedConfig = readFileConfig().getOrElse(Config())
 
-      if (config.debug) {
-        Configurator.setRootLevel(Level.DEBUG)
+  CliOptionParser.parser().parse(args, fileBasedConfig).foreach { config =>
+    if (config.debug) {
+      Configurator.setRootLevel(Level.DEBUG)
+    }
+
+    logger.info(s"Using config: $config")
+
+    val numberOfPagesToFetch = Math.ceil(config.postCount / BashOrgProfile.itemsPerPage.toDouble).toInt
+    val extractor = new DomainProfileExtractor[IO, BashOrgContent]()
+    val httpClient = Https4Client.apply[IO]()
+    val htmlParser = new JSoupParser
+
+    extractor
+      .fetchAndExtractData(numberOfPagesToFetch, BashOrgProfile, httpClient, htmlParser)
+      .map(_.take(config.postCount))
+      .map(_.asJson.toString())
+      .flatMap(contentToWrite => writeToFile(config.outputPath, contentToWrite).compile.drain)
+      .attempt
+      .unsafeRunSync()
+      .left
+      .foreach { throwable =>
+        logger.fatal("Crashed with error.", throwable)
       }
+  }
 
-      // TODO: merge two configs into one
-      logger.info("CLI config: " + config)
-      logger.info("Typesafe config: " + parsedFileConfig)
-
-      val extractedData =
-        new DomainProfileExtractor[IO, BashOrgContent]()
-          .fetchAndExtractData(
-            numberOfPages = Math.ceil(config.postCount / BashOrgProfile.itemsPerPage.toDouble).toInt,
-            BashOrgProfile,
-            Https4Client.apply[IO](),
-            new JSoupParser
-          )
-
-      val dataAsJson = extractedData.map(_.take(config.postCount).asJson.toString())
-
-      val dataWrittenToFile =
-        dataAsJson.flatMap(contentToWrite => writeToFile(parsedFileConfig.outputPath, contentToWrite).compile.drain)
-
-      dataWrittenToFile.attempt.unsafeRunSync().left.foreach { throwable =>
-        logger.fatal("Crashed.", throwable)
-      }
-
-    case None => // arguments are bad, error message will have been displayed
+  private def readFileConfig(): Option[Config] = {
+    pureconfig.loadConfig[Config] match {
+      case Right(fileConfig) => Some(fileConfig)
+      case Left(failures) =>
+        logger.error("Failure when reading file config: " + failures)
+        None
+    }
   }
 
   private def writeToFile(fileName: String, contentToWrite: String) = {

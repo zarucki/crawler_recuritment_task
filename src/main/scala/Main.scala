@@ -1,7 +1,7 @@
 import java.io.PrintWriter
 
 import cats.effect._
-import config.{CliConfig, FileConfig}
+import config.{CliConfig, CliOptionParser, FileConfig}
 import extract._
 import extract.fetch.Https4Client
 import extract.parse.jsoup.JSoupParser
@@ -15,7 +15,7 @@ import pureconfig.generic.auto._
 object Main extends App {
   val logger = LogManager.getLogger
 
-  parser.parse(args, CliConfig()) match {
+  CliOptionParser.parser().parse(args, CliConfig()) match {
     case Some(config) =>
       val parsedFileConfig =
         pureconfig.loadConfig[FileConfig] match {
@@ -61,23 +61,5 @@ object Main extends App {
       use = pw => fs2.Stream.eval(IO(pw.println(contentToWrite))),
       release = pw => IO(pw.close())
     )
-  }
-
-  private def parser = new scopt.OptionParser[CliConfig]("run") {
-    opt[Int]('n', "postCount")
-      .action((x, c) => c.copy(postCount = x))
-      .text("count of bash.org.pl posts to fetch.")
-
-    opt[Unit]("debug")
-      .action((_, c) => c.copy(debug = true))
-      .text("for showing debug messages")
-
-    help("help").text("prints this usage text")
-
-    arg[Int]("<postCount>...")
-      .unbounded()
-      .optional()
-      .action((x, c) => c.copy(postCount = x))
-      .text("optional unbounded args")
   }
 }

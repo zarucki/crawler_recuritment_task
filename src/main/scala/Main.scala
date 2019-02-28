@@ -1,3 +1,5 @@
+import java.io.PrintWriter
+
 import cats.effect._
 import config.{CliConfig, FileConfig}
 import extract._
@@ -19,10 +21,7 @@ object Main extends App {
         pureconfig.loadConfig[FileConfig] match {
           case Right(fileConfig) => fileConfig
           case Left(failures) =>
-            if (config.debug) {
-              // TODO: don't use println
-              println("failures: " + failures)
-            }
+            logger.error("Failure when reading file config: " + failures)
             FileConfig()
         }
 
@@ -30,31 +29,37 @@ object Main extends App {
         Configurator.setRootLevel(Level.DEBUG)
       }
 
-      println(config)
-      println(parsedFileConfig)
+      // TODO: merge two configs into one
+      logger.info("CLI config: " + config)
+      logger.info("Typesafe config: " + parsedFileConfig)
 
       val extractedData =
         new DomainProfileExtractor[IO, BashOrgContent]()
-          .fetchAndExtractData(numberOfPages = Math.ceil(config.postCount / 20.0).toInt,
+          .fetchAndExtractData(numberOfPages = Math.ceil(config.postCount / BashOrgProfile.itemsPerPage.toDouble).toInt,
                                BashOrgProfile,
                                Https4Client.apply[IO](),
                                new JSoupParser)
 
-      val dataAsJson = extractedData.map(_.map(_.asJson))
+      val dataAsJson = extractedData.map(_.take(config.postCount).asJson.toString())
 
-      dataAsJson.attempt.unsafeRunSync() match {
-        case Right(listOfJsons) =>
-//          println(listOfJsons.take(config.postCount).mkString("\n=====\n"))
-          println("total: " + listOfJsons.size)
-        case Left(throwable) => logger.fatal("Crashed.", throwable)
+      val dataWrittenToFile =
+        dataAsJson.flatMap(contentToWrite => writeToFile(parsedFileConfig.outputPath, contentToWrite).compile.drain)
+
+      dataWrittenToFile.attempt.unsafeRunSync().left.foreach { throwable =>
+        logger.fatal("Crashed.", throwable)
       }
 
     case None => // arguments are bad, error message will have been displayed
   }
 
-  private def parser = new scopt.OptionParser[CliConfig]("bash_org_pl_fetch") {
-    head("bash_org_pl_fetch", "0.1")
+  private def writeToFile(fileName: String, contentToWrite: String) = {
+    // TODO: `handleErrors
+    // TODO: write more stream like?
+    fs2.Stream.bracket(IO(new PrintWriter(fileName)))(use = pw => fs2.Stream.eval(IO(pw.println(contentToWrite))),
+                                                      release = pw => IO(pw.close()))
+  }
 
+  private def parser = new scopt.OptionParser[CliConfig]("run") {
     opt[Int]('n', "postCount")
       .action((x, c) => c.copy(postCount = x))
       .text("count of bash.org.pl posts to fetch.")

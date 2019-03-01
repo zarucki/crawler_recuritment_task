@@ -34,3 +34,11 @@ The output should be saved to file, which path is specified in typesafe config. 
 Really overengineered, cause it is after all a recruitment task ;)
 
 Used some cats, fs2.Stream, http4s, io.circe, pureconfig.
+
+## How to run
+
+Simply use something like
+
+    sbt run
+    sbt "run -n 2"
+    sbt test

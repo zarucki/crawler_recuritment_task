@@ -5,7 +5,7 @@ import cats.effect.Effect
 import cats.implicits._
 import org.http4s.client.Client
 import org.http4s.client.blaze.Http1Client
-import org.http4s.{Method, ParseFailure, Request, Uri}
+import org.http4s.{Method, ParseFailure, Request, Status, Uri}
 
 object Https4Client {
   def apply[F[_]: Effect](): F[Https4Client[F]] = {
@@ -22,10 +22,21 @@ class Https4Client[F[_]](client: Client[F]) extends ReusableHttpClient[F] {
       }
       .map { req =>
         client
-          .streaming(req) { response =>
-            response.bodyAsText
+          .streaming[Either[Throwable, String]](req) { response =>
+            if (response.status == Status.Ok) {
+              response.bodyAsText.map[Either[Throwable, String]](Right(_))
+            } else {
+              fs2.Stream.eval[F, Either[Throwable, String]](
+                F.pure(Left(new Exception(s"Got status ${response.status} for request $req.")))
+              )
+            }
           }
           .attempt
+          .map[Either[Throwable, String]] {
+            case Left(throwable)        => Left(throwable)
+            case Right(Left(throwable)) => Left(throwable)
+            case Right(Right(value))    => Right(value)
+          }
           .map(_.left.map[Throwable] {
             new Exception(s"Error while running req: $req.", _)
           })

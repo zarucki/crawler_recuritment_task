@@ -4,6 +4,10 @@ version := "0.1"
 
 scalaVersion := "2.12.8"
 
+resolvers += Resolver.sonatypeRepo("releases")
+
+addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9")
+
 val log4jVersion = "2.11.2"
 val log4CatVersion = "0.1.1" // Old because of conflicts in dependencies
 val scalaTestVersion = "3.0.5"

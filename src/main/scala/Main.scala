@@ -1,9 +1,11 @@
+import cats.data.EitherT
 import cats.effect._
 import config.{CliOptionParser, Config}
 import extract._
 import extract.fetch.Https4Client
 import extract.parse.jsoup.JSoupParser
 import extract.profiles.{BashOrgContent, BashOrgProfile}
+import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import io.circe.generic.auto._
 import org.apache.logging.log4j.{Level, LogManager}
 import org.apache.logging.log4j.core.config.Configurator
@@ -29,8 +31,10 @@ object Main extends App {
     val fileWriter = new PrintWriterFileWriter[IO]()
 
     val pipeline = for {
+      safeLogger <- Slf4jLogger.create[EitherT[IO, Throwable, ?]]
       bashContentItems <- extractor
         .fetchAndExtractData(config.pageCount, BashOrgProfile, httpClient, htmlParser)
+      _ <- safeLogger.info(s"Got in total: ${bashContentItems.size} items")
       jsonToWrite <- jsonSerializer.arrayAsJson(bashContentItems)
       result <- fileWriter.writeToFile(config.outputPath, jsonToWrite.toString())
     } yield result

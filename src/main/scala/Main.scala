@@ -28,15 +28,15 @@ object Main extends App {
     val httpClient = Https4Client.apply[IO]()
     val htmlParser = new JSoupParser[IO]()
     val jsonSerializer = new CirceJsonSerializer[IO, BashOrgContent]()
+
     val fileWriter = new PrintWriterFileWriter[IO]()
 
     val pipeline = for {
-      safeLogger <- Slf4jLogger.create[EitherT[IO, Throwable, ?]]
-      bashContentItems <- extractor
-        .fetchAndExtractData(config.pageCount, BashOrgProfile, httpClient, htmlParser)
-      _ <- safeLogger.info(s"Got in total: ${bashContentItems.size} items")
-      jsonToWrite <- jsonSerializer.arrayAsJson(bashContentItems)
-      result <- fileWriter.writeToFile(config.outputPath, jsonToWrite.toString())
+      safeLogger       <- Slf4jLogger.create[EitherT[IO, Throwable, ?]]
+      bashContentItems <- extractor.fetchAndExtractData(config.pageCount, BashOrgProfile, httpClient, htmlParser)
+      _                <- safeLogger.info(s"Got in total: ${bashContentItems.size} items")
+      jsonToWrite      <- jsonSerializer.arrayAsJson(bashContentItems)
+      result           <- fileWriter.writeToFile(config.outputPath, jsonToWrite.toString())
     } yield result
 
     pipeline.value

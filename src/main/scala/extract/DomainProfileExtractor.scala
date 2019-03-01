@@ -64,7 +64,7 @@ class DomainProfileExtractor[F[_], TEntity] extends Extractor[F, TEntity] {
   )(implicit F: Effect[F]): F[Either[Throwable, List[TEntity]]] = {
     val html = for {
       htmlString <- httpClient.fetchHtmlFromUrl(urlToFetch)
-      _ <- EitherT.right(logger.info(s"Fetched html from $urlToFetch"))
+      _          <- EitherT.right(logger.info(s"Fetched html from $urlToFetch"))
       parsedHtml <- htmlParser.parse(htmlString)
     } yield parsedHtml
 

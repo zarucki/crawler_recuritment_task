@@ -4,7 +4,7 @@ import extract.DomainProfile.{CssSelector, HtmlValueExtractor}
 import extract.parse.HtmlValue
 
 abstract class DomainProfile[TEntity](
-    val urlPattern: String, // TODO: more complex paging schemes?
+    val urlPattern: String,
     val mainCssSelector: CssSelector,
     val entityDetailsExtractors: Seq[(HtmlValueExtractor, (TEntity, String) => TEntity)],
     val firstIndex: Int = 1,

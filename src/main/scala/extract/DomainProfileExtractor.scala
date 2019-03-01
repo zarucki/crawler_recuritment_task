@@ -42,7 +42,7 @@ class DomainProfileExtractor[F[_], TEntity] extends Extractor[F, TEntity] {
             // TODO: not functional, unsafe :(
             val unsafeLogger = LogManager.getLogger
             nonEmptyErrorList.map { throwable =>
-              unsafeLogger.warn("Error while fetching by url.", throwable)
+              unsafeLogger.debug("Error while fetching by url.", throwable)
             }
             nonEmptyErrorList
           }
@@ -69,14 +69,35 @@ class DomainProfileExtractor[F[_], TEntity] extends Extractor[F, TEntity] {
     } yield parsedHtml
 
     html.value.map {
-      _.right.map { parsedHtml =>
-        parsedHtml.getMatchingElements(domainProfile.mainCssSelector).map { matchingRootElement =>
-          domainProfile.entityDetailsExtractors.foldLeft(domainProfile.emptyEntity) {
-            case (entity, (extractor, modifier)) =>
-              modifier(entity, matchingRootElement.getString(extractor))
+      case Right(parsedHtml) => extractFromHtmlEntities(parsedHtml, domainProfile)
+      case Left(throwable)   => Left(throwable)
+    }
+  }
+
+  def extractFromHtmlEntities(
+      parsedHtml: ParsedHtml,
+      domainProfile: DomainProfile[TEntity]
+  ): Either[Throwable, List[TEntity]] = {
+    parsedHtml.getMatchingElements(domainProfile.mainCssSelector) match {
+      case Right(elementsToParse) =>
+        elementsToParse.map { itemRootElement =>
+          domainProfile.entityDetailsExtractors.foldLeft[Either[Throwable, TEntity]](Right(domainProfile.emptyEntity)) {
+            case (entityEither, (extractor, modifier)) =>
+              entityEither match {
+                case Right(entity) =>
+                  itemRootElement.getString(extractor) match {
+                    case Right(stringValue) =>
+                      Either.catchNonFatal(modifier(entity, stringValue)).left.map {
+                        new Exception(s"Error when using value $stringValue when modifing $entity.", _)
+                      }
+                    case Left(throwable) => Left(throwable)
+
+                  }
+                case l @ Left(_) => l
+              }
           }
-        }
-      }
+        }.sequence // here we are shortcutting to first left either
+      case Left(throwable) => Left(throwable)
     }
   }
 }

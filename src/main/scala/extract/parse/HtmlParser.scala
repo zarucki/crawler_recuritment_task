@@ -5,8 +5,8 @@ import cats.effect.Sync
 import extract.DomainProfile.{CssSelector, HtmlValueExtractor}
 
 trait ParsedHtml {
-  def getMatchingElements(cssSelector: CssSelector): List[ParsedHtml]
-  def getString(htmlValueExtractor: HtmlValueExtractor): String
+  def getMatchingElements(cssSelector: CssSelector): Either[Throwable, List[ParsedHtml]]
+  def getString(htmlValueExtractor: HtmlValueExtractor): Either[Throwable, String]
 }
 
 trait HtmlParser[F[_]] {

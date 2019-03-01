@@ -28,22 +28,17 @@ abstract class UnitSpec extends FlatSpec with Assertions with OptionValues with 
   case class MockParsedHtml(cssSelectorHistory: Queue[CssSelector] = Queue.empty) extends ParsedHtml {
     var accessedValuesHistory: Queue[HtmlValueExtractor] = Queue[HtmlValueExtractor]()
 
-    override def getMatchingElements(cssSelector: CssSelector): List[ParsedHtml] =
-      List(MockParsedHtml(cssSelectorHistory :+ cssSelector))
+    override def getMatchingElements(cssSelector: CssSelector): Either[Throwable, List[ParsedHtml]] = {
+      Right(List(MockParsedHtml(cssSelectorHistory :+ cssSelector)))
+    }
 
-    override def getString(htmlValueExtractor: DomainProfile.HtmlValueExtractor): String = {
+    override def getString(htmlValueExtractor: DomainProfile.HtmlValueExtractor): Either[Throwable, String] = {
       accessedValuesHistory = accessedValuesHistory :+ htmlValueExtractor
-      ""
+      Right("")
     }
   }
 
   class MockParser[F[_]] extends HtmlParser[F] {
-//    override def parse(html: String): ParsedHtml = new MockParsedHtml()
-//    override def parse(html: String)(
-//        implicit F: Sync[Option]
-//    ): EitherT[Option, Throwable, ParsedHtml] = {
-//      EitherT.right(Option(new MockParsedHtml()))
-//    }
     override def parse(html: String)(
         implicit F: Sync[F]
     ): EitherT[F, Throwable, ParsedHtml] = {

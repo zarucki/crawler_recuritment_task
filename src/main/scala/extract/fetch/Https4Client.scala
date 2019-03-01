@@ -22,7 +22,9 @@ class Https4Client[F[_]](client: Client[F]) extends ReusableHttpClient[F] {
       }
       .map { req =>
         client
-          .streaming(req)(_.bodyAsText)
+          .streaming(req) { response =>
+            response.bodyAsText
+          }
           .attempt
           .compile
           .foldMonoid

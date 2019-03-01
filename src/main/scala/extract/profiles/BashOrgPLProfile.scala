@@ -9,8 +9,8 @@ object BashOrgProfile
     extends DomainProfile[BashOrgContent](
       urlPattern = "http://bash.org.pl/latest/?page=%d",
       mainCssSelector = ".post",
-      entityDetailsExtractors = Seq( // TODO: what about errors here? Also maybe Lens library?
-        (HtmlValueExtractor(None, Attribute("id")), (entity, value) => entity.copy(id = value.substring(1).toLong)),
+      entityDetailsExtractors = Seq( // TODO: Maybe Monocle library here?
+        (HtmlValueExtractor(None, Attribute("id")), (entity, value) => entity.copy(id = value.toLong)),
         (HtmlValueExtractor(Some(".points"), Text), (entity, value) => entity.copy(points = value.toLong)),
         (HtmlValueExtractor(Some(".post-content"), InnerHtml), (entity, value) => entity.copy(content = value))
       )

@@ -74,6 +74,23 @@ class ExtractSpec extends UnitSpec {
     assert(result.left.get.getMessage == "numberOfPages can't be less than 1.")
   }
 
+  it should "bash org profile should still work and return valid items" in {
+    val extractor = new DomainProfileExtractor[IO, BashOrgContent]()
+    val httpClient = Http4sClient.apply[IO]()
+    val htmlParser = new JSoupParser[IO]()
+
+    val pipeline = for {
+      bashContentItems <- extractor.fetchAndExtractData(2, BashOrgProfile, httpClient, htmlParser)
+    } yield bashContentItems
+
+    val results = pipeline.value.unsafeRunSync().right.get
+
+    assert(results.size == 40)
+    assert(results.forall(_.id > 0))
+    assert(results.forall(_.points != Long.MinValue))
+    assert(results.forall(_.content.size > 0))
+  }
+
   behavior of "Http4sClient"
 
   it should "should return connection error when invalid url" in {

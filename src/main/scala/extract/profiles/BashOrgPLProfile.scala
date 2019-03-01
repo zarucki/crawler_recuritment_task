@@ -3,7 +3,7 @@ import extract.DomainProfile
 import extract.DomainProfile.HtmlValueExtractor
 import extract.parse.{Attribute, InnerHtml, Text}
 
-case class BashOrgContent(id: Long = -1L, points: Long = -1L, content: String = "")
+case class BashOrgContent(id: Long = -1L, points: Long = -Long.MinValue, content: String = "")
 
 object BashOrgProfile
     extends DomainProfile[BashOrgContent](

@@ -4,16 +4,28 @@ import cats.data.EitherT
 import cats.effect.Effect
 import cats.implicits._
 import org.http4s.client.Client
-import org.http4s.client.blaze.Http1Client
-import org.http4s.{Method, ParseFailure, Request, Status, Uri}
+import org.http4s.client.blaze.{BlazeClientConfig, Http1Client}
+import org.http4s.headers.{`User-Agent`, AgentProduct}
+import org.http4s.{BuildInfo, Method, ParseFailure, Request, Status, Uri}
 
-object Https4Client {
-  def apply[F[_]: Effect](): F[Https4Client[F]] = {
-    Http1Client.apply[F]().map(new Https4Client[F](_))
+object Http4sClient {
+  def apply[F[_]: Effect](): F[Http4sClient[F]] = {
+    val defaultConfigWithCustomUserAgent = BlazeClientConfig.defaultConfig.copy(
+      userAgent = Some(
+        `User-Agent`(
+          AgentProduct(
+            "http4s-blaze scraper (https://github.com/zarucki/crawler_recuritment_task)",
+            Some(BuildInfo.version)
+          )
+        )
+      )
+    )
+
+    Http1Client.apply[F](defaultConfigWithCustomUserAgent).map(new Http4sClient[F](_))
   }
 }
 
-class Https4Client[F[_]](client: Client[F]) extends ReusableHttpClient[F] {
+class Http4sClient[F[_]](client: Client[F]) extends ReusableHttpClient[F] {
   override def fetchHtmlFromUrl(url: String)(implicit F: Effect[F]): EitherT[F, Throwable, String] = {
     val httpResult: Either[ParseFailure, F[Either[Throwable, String]]] = Uri
       .fromString(url)

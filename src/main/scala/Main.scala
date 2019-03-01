@@ -2,7 +2,7 @@ import cats.data.EitherT
 import cats.effect._
 import config.{CliOptionParser, Config}
 import extract._
-import extract.fetch.Https4Client
+import extract.fetch.Http4sClient
 import extract.parse.jsoup.JSoupParser
 import extract.profiles.{BashOrgContent, BashOrgProfile}
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
@@ -25,7 +25,7 @@ object Main extends App {
     logger.info(s"Using config: $config")
 
     val extractor = new DomainProfileExtractor[IO, BashOrgContent]()
-    val httpClient = Https4Client.apply[IO]()
+    val httpClient = Http4sClient.apply[IO]()
     val htmlParser = new JSoupParser[IO]()
     val jsonSerializer = new CirceJsonSerializer[IO, BashOrgContent]()
 

@@ -7,8 +7,7 @@ abstract class DomainProfile[TEntity](
     val urlPattern: String,
     val mainCssSelector: CssSelector,
     val entityDetailsExtractors: Seq[(HtmlValueExtractor, (TEntity, String) => TEntity)],
-    val firstIndex: Int = 1,
-    val itemsPerPage: Int = 20
+    val firstIndex: Int = 1
 ) {
   def emptyEntity: TEntity
 }

@@ -22,7 +22,6 @@ object Main extends App {
 
     logger.info(s"Using config: $config")
 
-    val numberOfPagesToFetch = Math.ceil(config.postCount / BashOrgProfile.itemsPerPage.toDouble).toInt
     val extractor = new DomainProfileExtractor[IO, BashOrgContent]()
     val httpClient = Https4Client.apply[IO]()
     val htmlParser = new JSoupParser[IO]()
@@ -31,8 +30,8 @@ object Main extends App {
 
     val pipeline = for {
       bashContentItems <- extractor
-        .fetchAndExtractData(numberOfPagesToFetch, BashOrgProfile, httpClient, htmlParser)
-      jsonToWrite <- jsonSerializer.arrayAsJson(bashContentItems.take(config.postCount))
+        .fetchAndExtractData(config.pageCount, BashOrgProfile, httpClient, htmlParser)
+      jsonToWrite <- jsonSerializer.arrayAsJson(bashContentItems)
       result <- fileWriter.writeToFile(config.outputPath, jsonToWrite.toString())
     } yield result
 

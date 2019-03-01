@@ -26,6 +26,9 @@ class Https4Client[F[_]](client: Client[F]) extends ReusableHttpClient[F] {
             response.bodyAsText
           }
           .attempt
+          .map(_.left.map[Throwable] {
+            new Exception(s"Error while running req: $req.", _)
+          })
           .compile
           .foldMonoid
       }

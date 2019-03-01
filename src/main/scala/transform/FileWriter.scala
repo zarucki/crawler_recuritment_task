@@ -15,7 +15,9 @@ class PrintWriterFileWriter[F[_]] extends FileWriter[F] {
   override def writeToFile(fileName: String, contentToWrite: String)(
       implicit F: Effect[F]
   ): EitherT[F, Throwable, Unit] = {
-    val acquirePrinter = F.pure(Either.catchNonFatal(new PrintWriter(fileName)))
+    val acquirePrinter = F.pure(Either.catchNonFatal(new PrintWriter(fileName)).left.map {
+      new Exception(s"Error while opening PrintWriter for filename: $fileName.", _)
+    })
 
     def writeAction(pw: Either[Throwable, PrintWriter]): FStream[F, Either[Throwable, Unit]] = {
       FStream.eval(F.pure(pw.map(_.println(contentToWrite))))

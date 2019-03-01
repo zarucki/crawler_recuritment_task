@@ -8,7 +8,12 @@ import scala.collection.JavaConverters._
 case class JSoupParsedHtml(element: Element) extends ParsedHtml {
 
   override def getMatchingElements(cssSelector: CssSelector): Either[Throwable, List[ParsedHtml]] = {
-    Either.catchNonFatal(element.select(cssSelector)).map(_.asScala.map(JSoupParsedHtml(_)).toList)
+    Either.catchNonFatal(element.select(cssSelector)).map(_.asScala.map(JSoupParsedHtml(_)).toList).left.map {
+      new Exception(
+        s"Error while matching selector $cssSelector with ${elementAsConsoleSttring(element)}.",
+        _
+      )
+    }
   }
 
   override def getString(htmlValueExtractor: HtmlValueExtractor): Either[Throwable, String] = {
@@ -20,7 +25,7 @@ case class JSoupParsedHtml(element: Element) extends ParsedHtml {
             .left
             .map {
               new Exception(
-                s"Exception while accessing applying selector $selector with ${element.toString.replaceAll("\n", "")}",
+                s"Exception while accessing applying selector $selector with ${elementAsConsoleSttring(element)}",
                 _
               )
             }
@@ -35,5 +40,9 @@ case class JSoupParsedHtml(element: Element) extends ParsedHtml {
           case InnerHtml       => el.html()
         }
       }
+  }
+
+  private def elementAsConsoleSttring(element: Element) = {
+    element.toString.replaceAll("\\s+", " ")
   }
 }

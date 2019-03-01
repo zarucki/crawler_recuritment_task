@@ -9,9 +9,14 @@ class JSoupParser[F[_]] extends HtmlParser[F] {
   override def parse(html: String)(implicit F: Sync[F]): EitherT[F, Throwable, ParsedHtml] = {
     EitherT(
       F.pure(
-        Either.catchNonFatal(
-          JSoupParsedHtml(Jsoup.parse(html).body())
-        )
+        Either
+          .catchNonFatal(
+            JSoupParsedHtml(Jsoup.parse(html).body())
+          )
+          .left
+          .map {
+            new Exception(s"Error while parsing ${html.replaceAllLiterally("\n", "")}", _)
+          }
       )
     )
   }
